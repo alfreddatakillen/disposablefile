@@ -6,23 +6,30 @@ const path = require('path');
 
 const osTmpDir = fs.realpathSync(os.tmpdir());
 
-let basePath;
+let basePath = path.join(osTmpDir, 'disposables-' + process.pid + '-' + crypto.randomBytes(Math.ceil(16)).toString('hex'));;
 let baseDirPromise;
 
 function baseDir() {
     if (baseDirPromise) return baseDirPromise;
-    basePath = path.join(osTmpDir, 'disposables-' + process.pid + '-' + crypto.randomBytes(Math.ceil(16)).toString('hex'));
     return baseDirPromise = new Promise((resolve, reject) => {
         fs.mkdir(basePath, err => {
-            if (err) return reject(err);
+            if (err) {
+                if (err.code === 'EEXIST') return resolve(basePath); // Dir already exists.
+                return reject(err);
+            }
             resolve(basePath);
         });
     });
 }
 
-function cleanUp() {
-    if (typeof basePath === 'undefined') return;
+function baseDirSync() {
+    if (!fs.existsSync(basePath)) {
+        fs.mkdirSync(basePath);
+    }
+    return basePath;
+}
 
+function cleanUp() {
     if (!fs.existsSync(basePath)) return;
 
     lsr(basePath).sort((a, b) => b.length - a.length)
@@ -49,6 +56,12 @@ function dir() {
                 });    
             });
         });
+}
+
+function dirSync() {
+    const dir = path.join(baseDirSync(), crypto.randomBytes(Math.ceil(16)).toString('hex'));
+    fs.mkdirSync(dir);
+    return dir;
 }
 
 const defaultOptions = {
@@ -85,6 +98,21 @@ function file(options) {
         });
 }
 
+function fileSync(options) {
+    options = {...defaultOptions, ...options};
+    const dir = dirSync();
+    let file;
+    if (typeof options.name !== 'string') {
+        file = path.join(dir, options.prefix + crypto.randomBytes(Math.ceil(16)).toString('hex') + options.suffix);
+    } else {
+        file = path.join(dir, options.name);
+    }
+    if (options.create === false) return file;
+    const fd = fs.openSync(file, 'w');
+    fs.closeSync(fd);
+    return file;
+}
+
 function lsr(dir) { // synchronous recursive ls
     return fs.readdirSync(dir)
         .reduce(
@@ -105,5 +133,7 @@ onDeath(cleanUp);
 module.exports = {
     cleanUp,
     dir,
-    file
+    dirSync,
+    file,
+    fileSync
 }

@@ -56,6 +56,13 @@ disposableFile.dir()
 Deleted all your temporary files and directories. This function will be called before the Node.js process quits.
 (But, if the Node.js is killed by a `SIGKILL`, it will die before we can do any clean up...)
 
-Note: Unlike the rest of this module, `.cleanUp()` is a synchronous operation. That is because only synchronous functions are guaranteed to be finished
-before exit on process termination.
+Note: `.cleanUp()` is a synchronous function. (That is because only synchronous functions are guaranteed to be finished
+before exit on process termination.)
 
+### disposableFile.dirSync()
+
+The synchronous version of `.dir()`
+
+### disposableFile.fileSync(options)
+
+THe synchronous version of `.file()`
